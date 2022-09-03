@@ -21,6 +21,7 @@ impl Card {
 }
 
 pub fn get_cards(set: &str, rarity: &Rarity) -> Result<Vec<Card>, Box<dyn std::error::Error>> {
+    println!("Retrieving cards info for set : {}, rarities {:#?}", set, rarity);
     let url = format!(
         "https://api.scryfall.com/cards/search?q=set%3A{}+r%3A{:?}+is%3Abooster",
         set, rarity

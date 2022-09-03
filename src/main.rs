@@ -45,7 +45,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
     let rarities: HashSet<Rarity> = args.rarity.iter().cloned().collect();
-    println!("Set : {}, rarities {:#?}", args.set, rarities);
     //Get data from scryfall, parse and write to file
     rarities.iter().for_each(|r| {
         let data = to_csv(http::get_cards(&args.set, r).unwrap());
