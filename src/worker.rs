@@ -2,8 +2,8 @@ use crate::Rarity;
 use serde_json::Value;
 use std::ops::Add;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
 use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Debug)]
 pub struct Card {
@@ -42,10 +42,7 @@ async fn get_cards_data(set: &str, rarity: &Rarity) -> Result<Value, Box<dyn std
         set, rarity
     );
     println!("Url : {:#?}", url);
-    let resp = reqwest::get(url)
-        .await?
-        .json::<Value>()
-        .await?;
+    let resp = reqwest::get(url).await?.json::<Value>().await?;
     Ok(resp)
 }
 
@@ -74,7 +71,11 @@ async fn parse_data(v: Value) -> Result<Vec<Card>, Box<dyn std::error::Error>> {
     Ok(cards)
 }
 
-async fn write_cards_to_file(set: &str, rarity: &Rarity, cards: Vec<Card>) -> Result<(), Box<dyn std::error::Error>>{
+async fn write_cards_to_file(
+    set: &str,
+    rarity: &Rarity,
+    cards: Vec<Card>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let v: Vec<String> = cards.iter().map(|c| c.to_line()).collect();
     let data = v.join("\n").add("\n");
     let filename = format!("{}.{:#?}.csv", set, rarity);
