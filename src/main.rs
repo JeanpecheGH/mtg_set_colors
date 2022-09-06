@@ -1,11 +1,9 @@
 use clap::Parser;
 use std::collections::HashSet;
-use std::fs;
-use std::ops::Add;
 use std::str::FromStr;
+use std::sync::Arc;
 
-mod http;
-use http::Card;
+mod worker;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum Rarity {
@@ -42,15 +40,27 @@ struct Args {
     rarity: Vec<Rarity>,
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args = Args::parse();
+    let arc_set: Arc<String> = Arc::new(args.set);
+    //Filter doubles
     let rarities: HashSet<Rarity> = args.rarity.iter().cloned().collect();
+
     //Get data from scryfall, parse and write to file
-    rarities.iter().for_each(|r| {
-        let data = to_csv(http::get_cards(&args.set, r).unwrap());
-        let filename = format!("{}.{:#?}.csv", &args.set, r);
-        fs::write(filename, data).expect("Unable to write file");
-    })
+    let tasks: Vec<_> = rarities
+        .into_iter()
+        .map(|r| {
+            let arc_set = arc_set.clone();
+            tokio::spawn(async {
+                let _ = worker::get_cards(arc_set, r).await;
+            })
+        })
+        .collect();
+    //Await all the tasks
+    for task in tasks {
+        task.await.unwrap();
+    }
 }
 
 fn parse_set(set: &str) -> Result<String, String> {
@@ -61,9 +71,4 @@ fn parse_set(set: &str) -> Result<String, String> {
     } else {
         Ok(String::from(set))
     }
-}
-
-fn to_csv(cards: Vec<Card>) -> String {
-    let v: Vec<String> = cards.iter().map(|c| c.to_line()).collect();
-    v.join("\n").add("\n")
 }
