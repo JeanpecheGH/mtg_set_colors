@@ -2,6 +2,7 @@ use crate::Rarity;
 use serde_json::Value;
 use std::ops::Add;
 use std::sync::Arc;
+use reqwest::header::{HeaderMap, USER_AGENT};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -32,7 +33,7 @@ pub async fn get_cards(set: Arc<String>, rarity: Rarity) -> Result<(), Box<dyn s
     );
     let json = get_cards_data(set.as_str(), &rarity).await?;
     let cards = parse_data(json).await?;
-    let _ = write_cards_to_file(set.as_str(), &rarity, cards).await?;
+    write_cards_to_file(set.as_str(), &rarity, cards).await?;
     Ok(())
 }
 
@@ -42,7 +43,14 @@ async fn get_cards_data(set: &str, rarity: &Rarity) -> Result<Value, Box<dyn std
         set, rarity
     );
     println!("Url : {:#?}", url);
-    let resp = reqwest::get(url).await?.json::<Value>().await?;
+
+    let client = reqwest::Client::new();
+
+    // Add User agent to a HeaderMap
+    let mut headers = HeaderMap::new();
+    headers.insert(USER_AGENT, "MtgSetColors/0.1.1".parse().unwrap());
+
+    let resp = client.get(url).headers(headers).send().await?.json::<Value>().await?;
     Ok(resp)
 }
 

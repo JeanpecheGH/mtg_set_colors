@@ -35,7 +35,7 @@ struct Args {
     #[clap(value_parser = parse_set)]
     /// The target MTG Set Trigram
     set: String,
-    #[clap(short, long, multiple_values = true, max_values = 4, default_values = &["M","R","U"])]
+    #[clap(short, long, value_delimiter = ',', default_values = &["M","R","U"])]
     /// Space separated target rarities among M,R,U,C
     rarity: Vec<Rarity>,
 }
