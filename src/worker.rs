@@ -53,7 +53,7 @@ async fn get_cards_data(set: &str, rarity: &Rarity, all_cards: bool) -> Result<V
 
     // Add User agent to a HeaderMap
     let mut headers = HeaderMap::new();
-    headers.insert(USER_AGENT, "MtgSetColors/0.1.1".parse().unwrap());
+    headers.insert(USER_AGENT, "MtgSetColors/0.1.2".parse().unwrap());
 
     let resp = client.get(url).headers(headers).send().await?.json::<Value>().await?;
     Ok(resp)
