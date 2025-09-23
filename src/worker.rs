@@ -1,4 +1,4 @@
-use crate::Rarity;
+use crate::{Args, Rarity};
 use serde_json::Value;
 use std::ops::Add;
 use std::sync::Arc;
@@ -26,21 +26,26 @@ impl Card {
     }
 }
 
-pub async fn get_cards(set: Arc<String>, rarity: Rarity) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn get_cards(args: Arc<Args>, rarity: Rarity) -> Result<(), Box<dyn std::error::Error>> {
     println!(
-        "Retrieving cards info for set : {}, rarities {:#?}",
-        set, rarity
+        "Retrieving cards info for set : {}, rarities {:#?}, use all cards {}, use printed name {}",
+        args.set, rarity, args.all_cards, args.printed_name
     );
-    let json = get_cards_data(set.as_str(), &rarity).await?;
-    let cards = parse_data(json).await?;
-    write_cards_to_file(set.as_str(), &rarity, cards).await?;
+    let json = get_cards_data(args.set.as_str(), &rarity, args.all_cards).await?;
+    let cards = parse_data(json, args.printed_name).await?;
+    write_cards_to_file(args.set.as_str(), &rarity, cards).await?;
     Ok(())
 }
 
-async fn get_cards_data(set: &str, rarity: &Rarity) -> Result<Value, Box<dyn std::error::Error>> {
+async fn get_cards_data(set: &str, rarity: &Rarity, all_cards: bool) -> Result<Value, Box<dyn std::error::Error>> {
+    let all_cards_param: &str = if all_cards {
+        ""
+    } else {
+        "+is%3Abooster"
+    };
     let url = format!(
-        "https://api.scryfall.com/cards/search?q=set%3A{}+r%3A{:?}+is%3Abooster",
-        set, rarity
+        "https://api.scryfall.com/cards/search?q=set%3A{}+r%3A{:?}{}",
+        set, rarity, all_cards_param
     );
     println!("Url : {:#?}", url);
 
@@ -54,13 +59,32 @@ async fn get_cards_data(set: &str, rarity: &Rarity) -> Result<Value, Box<dyn std
     Ok(resp)
 }
 
-async fn parse_data(v: Value) -> Result<Vec<Card>, Box<dyn std::error::Error>> {
+async fn parse_data(v: Value, printed_name: bool) -> Result<Vec<Card>, Box<dyn std::error::Error>> {
     let cards: Vec<Card> = v["data"]
         .as_array()
         .unwrap()
         .iter()
         .map(|v| {
-            let name: String = v["name"].to_string().replace('"', "");
+            let name: String = if printed_name {
+                if v["printed_name"].is_null() {
+                    //If there is not printed name, we either have a double-face card or a card with a single name
+                    if v["card_faces"].is_null() {
+                        //Take the single name
+                        v["name"].to_string().replace('"', "")
+                    } else {
+                        //We have to concatenate the names of the two sides
+                        let faces_names: Vec<String> = v["card_faces"].as_array().unwrap().iter().map(|v| {
+                            v["printed_name"].to_string().replace('"', "")
+                        }).collect();
+                        format!("{} // {}", faces_names[0], faces_names[1])
+                    }
+                } else {
+                    v["printed_name"].to_string().replace('"', "")
+                }
+
+            } else {
+                v["name"].to_string().replace('"', "")
+            };
             let field: &str = if v["colors"].is_null() {
                 "color_identity"
             } else {

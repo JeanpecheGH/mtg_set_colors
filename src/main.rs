@@ -36,24 +36,31 @@ struct Args {
     /// The target MTG Set Trigram
     set: String,
     #[clap(short, long, value_delimiter = ',', default_values = &["M","R","U"])]
-    /// Space separated target rarities among M,R,U,C
+    /// Comma separated target rarities among M,R,U,C
     rarity: Vec<Rarity>,
+    #[clap(long, short, action)]
+    /// Use all cards, not only booster cards
+    all_cards: bool,
+    #[clap(long, short, action)]
+    /// Use the printed name instead
+    printed_name: bool,
+
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    let arc_set: Arc<String> = Arc::new(args.set);
     //Filter doubles
     let rarities: HashSet<Rarity> = args.rarity.iter().cloned().collect();
+    let arc_args = Arc::new(args);
 
     //Get data from scryfall, parse and write to file
     let tasks: Vec<_> = rarities
         .into_iter()
         .map(|r| {
-            let arc_set = arc_set.clone();
+            let arc_args = arc_args.clone();
             tokio::spawn(async {
-                let _ = worker::get_cards(arc_set, r).await;
+                let _ = worker::get_cards(arc_args, r).await;
             })
         })
         .collect();
