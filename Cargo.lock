@@ -607,11 +607,11 @@ dependencies = [
 
 [[package]]
 name = "mtg_set_colors"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "clap",
  "reqwest",
- "serde_json",
+ "serde",
  "tokio",
 ]
 
